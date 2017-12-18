@@ -29,9 +29,8 @@ import requests as rqs
 from datetime import datetime
 import re
 import numpy as np
-from collections import defaultdict
 import pandas as pd
-import unicodecsv as csv
+import csv
 
 
 # User parameters ========================================
@@ -40,7 +39,7 @@ WHAT = "Data Scientist"
 WHERE = "Hong Kong"
 RECORD_CSV = True
 RECORD_EXCEL = True
-RECORD_DB = True
+RECORD_DB = False
 FIELDNAMES = ['scrape_datetime', 'jk', 'job_title', 'company', 'job_location', 'post_datetime', 'job_description']
 # ========================================================
 
@@ -64,8 +63,8 @@ def get_job_soup(what = WHAT, where = WHERE, start = 0):
 def scrape_single_page(what = WHAT, where = WHERE, start = 0):
 	"""Scrape a single Indeed page."""
 
-	# Initiate new dict to store *all* job data in one query.
-	page_job_data = defaultdict(str)
+	# Initiate new dataframe to store *all* job data in one query.
+	page_job_data = pd.DataFrame(columns = FIELDNAMES)
 
 	# Make BeautifulSoup with Indeed *job* page.
 	job_soup = get_job_soup(what, where, start)
@@ -107,7 +106,7 @@ def scrape_single_page(what = WHAT, where = WHERE, start = 0):
 			job_data['job_description'] = content.text
 
 		# Append single job data to `all_job_data` using `jk` as key.
-		page_job_data[jk] = job_data
+		page_job_data = page_job_data.append(job_data, ignore_index = True)
 
 	return page_job_data
 
@@ -140,54 +139,36 @@ def scrape_all_pages(what = WHAT, where = WHERE):
 
 	start_range = get_start_range(what, where)
 
-	all_job_data = defaultdict(str)
+	all_job_data = pd.DataFrame(columns = FIELDNAMES)
 
 	for i in start_range:
 		page_job_data = scrape_single_page(what, where, start = i)
-		all_job_data.update(page_job_data)
+		all_job_data = all_job_data.append(page_job_data)
 		print("Scraping start = {0}.".format(i))
 
 	return all_job_data
 
 
-def write_to_csv(filename, data):
-	with open(filename, 'w') as csvfile:
-		writer = csv.DictWriter(csvfile, fieldnames = FIELDNAMES)
-		writer.writeheader()
-		for value in data.values():
-			writer.writerow(value)
-
-
-# TODO: def `write_to_excel`
-
-
-def write_to_db(data):
-	for value in data.values():
-		scraperwiki.sqlite.save(unique_keys = ['jk'], data = value)
-
-
-
-def scrape_indeed(what=WHAT, where=WHERE, record_csv=RECORD_CSV, record_excel=RECORD_EXCEL, record_db=RECORD_DB):
+def scrape_indeed(what = WHAT, where = WHERE, record_csv = RECORD_CSV, record_excel = RECORD_EXCEL, record_db = RECORD_DB):
 
 	print("Starting to scrape Indeed: {0} in {1}.".format(what, where))
 
 	data = scrape_all_pages(what, where)
 
-	date = datetime.now().strftime("%Y%m%d")
-
 	if record_csv:
-		csv_filename = '{0}_{1}_{2}_{3}.csv'.format(what, where, 'indeed', date).lower().replace(' ', '')
-		print("Writing to '{0}'.".format(csv_filename))
-		write_to_csv(csv_filename, data)
-		print("Writing completed. View your data at '{0}'.".format(csv_filename))
+		print("Writing to CSV.")
+		date = datetime.now().strftime("%Y%m%d")
+		filename = '{0}_{1}_{2}_{3}.csv'.format(what, where, 'indeed', date).lower().replace(' ', '')
+		data.to_csv(filename, encoding='utf-8')
+		print("Writing completed. View your data at '{0}'.".format(filename))
 
 	if record_excel:
+		print("Writing to Excel.")
 		pass
 
 	if record_db:
-		print("Writing to scraperwiki database.")
-		write_to_db(data)
-		print("Writing completed. View your data at 'data.sqlite'.")
+		print("Writing to Database.")
+		scraperwiki.sqlite.save(unique_keys = ['jk'], data = data.to_dict())
 
 	print("Scraping completed.")
 
