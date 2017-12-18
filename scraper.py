@@ -30,6 +30,7 @@ from datetime import datetime
 import re
 import numpy as np
 from collections import defaultdict
+from collections import OrderedDict
 import pandas as pd
 import unicodecsv as csv
 
@@ -74,7 +75,8 @@ def scrape_single_page(what = WHAT, where = WHERE, start = 0):
 	for job in job_soup.find_all('div', {'class': 'row'}):
 
 		# Initiate new dict to store a *single* job data.
-		job_data = dict()
+		# job_data = dict()
+		job_data = OrderedDict()
 
 		# `scrape_datetime`
 		scrape_datetime = datetime.now()
