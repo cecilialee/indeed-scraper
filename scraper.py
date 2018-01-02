@@ -1,28 +1,3 @@
-# This is a template for a Python scraper on morph.io (https://morph.io)
-# including some code snippets below that you should find helpful
-
-# import scraperwiki
-# import lxml.html
-#
-# # Read in a page
-# html = scraperwiki.scrape("http://foo.com")
-#
-# # Find something on the page using css selectors
-# root = lxml.html.fromstring(html)
-# root.cssselect("div[align='left']")
-#
-# # Write out to the sqlite database using scraperwiki library
-# scraperwiki.sqlite.save(unique_keys=['name'], data={"name": "susan", "occupation": "software developer"})
-#
-# # An arbitrary query against the database
-# scraperwiki.sql.select("* from data where 'name'='peter'")
-
-# You don't have to do things with the ScraperWiki and lxml libraries.
-# You can use whatever libraries you want: https://morph.io/documentation/python
-# All that matters is that your final data is written to an SQLite database
-# called "data.sqlite" in the current working directory which has at least a table
-# called "data".
-
 import scraperwiki
 from bs4 import BeautifulSoup
 import requests as rqs
@@ -40,7 +15,6 @@ START_SCRAPING = True
 WHAT = "Data Scientist"
 WHERE = "Hong Kong"
 RECORD_CSV = True
-RECORD_EXCEL = False
 RECORD_DB = True
 # FIELDNAMES = ['scrape_datetime', 'jk', 'job_title', 'company', 'job_location', 'post_datetime', 'job_description']
 FIELDNAMES = ['epoch', 'scrping_dt', 'ad_id_indeed', 'ad_jobtitle_indeed', 'ad_cie_indeed', 'ad_jobloc_indeed', 'ad_post_dt_indeed', 'ad_jobdes_indeed', 'search_ad_url', 'ad_url', 'ad_jobdate', 'ad_jobtitle', 'ad_jobcie', 'ad_jobdes', 'ad_email']
@@ -100,17 +74,14 @@ def scrape_single_page(what = WHAT, where = WHERE, start = 0):
 			for content in job.find_all('span', {'class': field[0]}):
 				job_data[field[1]] = content.text.lstrip()
 
-		# TODO: wrangle `ad_post_dt_indeed` (str to datetime)
-
 		# Make Soup with Indeed *view job* page by passing the jk value (`ad_id_indeed`).
 		viewjob_page = rqs.get(get_viewjob_url(jk))
-		viewjob_soup = BeautifulSoup(viewjob_page.text, 'html.parser')
+		viewjob_soup = BeautifulSoup(viewjob_page.text, 'lxml')
 
 		# `ad_jobdes_indeed`
 		for content in viewjob_soup.find_all('span', {'id': 'job_summary'}):
 			job_data['ad_jobdes_indeed'] = content.text
 
-		# TODO: `ad_url`
 		# `search_ad_url`
 		# `ad_url`
 		for content in job.find_all('a', {'class': 'turnstileLink'}):
@@ -187,17 +158,13 @@ def write_to_csv(filename, data):
 		for value in data.values():
 			writer.writerow(value)
 
-
-# TODO: def `write_to_excel`
-
-
 def write_to_db(data):
 	for value in data.values():
 		scraperwiki.sqlite.save(unique_keys = ['ad_url'], data = value)
 
 
 
-def scrape_indeed(what=WHAT, where=WHERE, record_csv=RECORD_CSV, record_excel=RECORD_EXCEL, record_db=RECORD_DB):
+def scrape_indeed(what=WHAT, where=WHERE, record_csv=RECORD_CSV, record_db=RECORD_DB):
 
 	print("Starting to scrape Indeed: {0} in {1}.".format(what, where))
 
@@ -209,9 +176,6 @@ def scrape_indeed(what=WHAT, where=WHERE, record_csv=RECORD_CSV, record_excel=RE
 		print("Writing to '{0}'.".format(csv_filename))
 		write_to_csv(csv_filename, data)
 		print("Writing completed. View your data at '{0}'.".format(csv_filename))
-
-	if record_excel:
-		pass
 
 	if record_db:
 		print("Writing to scraperwiki database.")
