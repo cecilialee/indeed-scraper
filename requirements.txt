@@ -13,6 +13,6 @@ certifi==2017.11.5
 numpy==1.13.3
 pandas==0.21.1
 requests==2.18.4
-urllib3==1.22
+urllib3==1.24.2
 unicodecsv==0.14.1
 lxml==4.1.1
